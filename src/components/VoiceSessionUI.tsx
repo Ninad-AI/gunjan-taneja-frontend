@@ -5,7 +5,6 @@ import Ripple from '@/components/ui/ripple';
 
 interface VoiceSessionUIProps {
     isSpeaking: boolean;
-    callPhase: 'connecting' | 'listening' | 'speaking';
     timeLeft: number;
     totalTime: number;
     onEndCall: () => void;
@@ -15,7 +14,6 @@ interface VoiceSessionUIProps {
 
 export default function VoiceSessionUI({
     isSpeaking,
-    callPhase,
     timeLeft,
     totalTime,
     onEndCall,
@@ -38,10 +36,6 @@ export default function VoiceSessionUI({
         const sec = t % 60;
         return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
     };
-
-    const statusDotColor = callPhase === 'connecting'
-        ? { ping: 'bg-amber-400', dot: 'bg-amber-500' }
-        : { ping: 'bg-rose-400', dot: 'bg-rose-500' };
 
     return (
         <Ripple
@@ -133,18 +127,6 @@ export default function VoiceSessionUI({
                         <span className="tabular-nums text-5xl font-extralight tracking-tight text-white/95 drop-shadow-[0_0_20px_rgba(255,255,255,0.2)] sm:text-6xl">
                             {formatTime(timeLeft)}
                         </span>
-
-                        {/* Status */}
-                        <div className="flex items-center gap-3">
-                            <span className="relative flex h-1.5 w-1.5">
-                                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${statusDotColor.ping}`} />
-                                <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${statusDotColor.dot}`} />
-                            </span>
-                            <span className="text-[11px] font-light uppercase tracking-[0.6em] text-white/40">
-                                {callPhase}
-                            </span>
-                        </div>
-
                     </div>
                 </div>
             </div>

@@ -8,7 +8,6 @@ import Aurora from "../components/ui/Aurora";
 import { PROFILE } from "@/lib/profile";
 
 type FlowState = "idle" | "active";
-type CallPhase = "connecting" | "listening" | "speaking";
 
 const WS_URL = process.env.NEXT_PUBLIC_BACKEND_WS_URL || "ws://localhost:8000/ws/audio/gunjan";
 
@@ -18,7 +17,6 @@ export default function Home() {
   const [flowState, setFlowState] = useState<FlowState>("idle");
   const [timeLeft, setTimeLeft] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [callPhase, setCallPhase] = useState<CallPhase>("connecting");
   const [isVisible, setIsVisible] = useState(false);
 
   const mousePosRef = useRef({ x: 0, y: 0 });
@@ -154,14 +152,12 @@ export default function Home() {
     if (flowState !== "active") return;
 
     setIsSpeaking(false);
-    setCallPhase("connecting");
 
     const ws = new WebSocket(WS_URL);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
 
     ws.onopen = async () => {
-      setCallPhase("listening");
       ttsActiveRef.current = false;
       try {
         const controller = await startStreamingMic(ws, () => {
@@ -172,14 +168,12 @@ export default function Home() {
           onSpeechStart: () => {
             // Only update when model is NOT speaking (prevents echo triggering)
             if (!ttsActiveRef.current) {
-              setCallPhase("listening");
             }
           },
           onSpeechEnd: () => {
             // User stopped speaking; stay on "listening" until model responds
             // Only update when model is NOT speaking (prevents echo triggering)
             if (!ttsActiveRef.current) {
-              setCallPhase("listening");
             }
           },
         });
@@ -193,7 +187,6 @@ export default function Home() {
       if (event.data instanceof ArrayBuffer) {
         ttsActiveRef.current = true;
         setIsSpeaking(true);
-        setCallPhase("speaking");
         processBinaryChunk(event.data);
       } else {
         // JSON control messages (tts_start, tts_end, etc.)
@@ -202,7 +195,6 @@ export default function Home() {
           if (msg.type === "tts_start") {
             ttsActiveRef.current = true;
             setIsSpeaking(true);
-            setCallPhase("speaking");
           }
           if (msg.type === "tts_end") {
             // Wait for all scheduled audio buffers to finish playing
@@ -212,12 +204,10 @@ export default function Home() {
               Promise.all(pendingPromises).then(() => {
                 ttsActiveRef.current = false;
                 setIsSpeaking(false);
-                setCallPhase("listening");
               });
             } else {
               ttsActiveRef.current = false;
               setIsSpeaking(false);
-              setCallPhase("listening");
             }
           }
         } catch {
@@ -227,12 +217,10 @@ export default function Home() {
     };
 
     ws.onerror = () => {
-      setCallPhase("connecting");
     };
 
     ws.onclose = () => {
       setIsSpeaking(false);
-      setCallPhase("connecting");
     };
 
     return () => {
@@ -276,7 +264,6 @@ export default function Home() {
     setFlowState("idle");
     setTimeLeft(0);
     setIsSpeaking(false);
-    setCallPhase("connecting");
   }, [stopPlaybackImmediately]);
 
   /* ── Countdown timer ── */
@@ -322,7 +309,6 @@ export default function Home() {
         {flowState === "active" ? (
             <VoiceSessionUI
               isSpeaking={isSpeaking}
-              callPhase={callPhase}
               timeLeft={timeLeft}
               totalTime={SESSION_MINUTES * 60}
               onEndCall={handleEndCall}
